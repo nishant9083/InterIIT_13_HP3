@@ -1,0 +1,9 @@
+# chromadb>=0.4.4
+# openai>=1.7.2
+# tqdm
+# llama_index.llms.ollama
+# flask
+# flask_socketio
+# requests
+langchain_google_genai
+langchain-groq

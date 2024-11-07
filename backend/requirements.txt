@@ -1,0 +1,13 @@
+flask
+flask_socketio
+requests
+langchain_google_genai
+langchain-groq
+langchain
+langchain_openai
+langsmith
+pandas
+langchain_experimental
+matplotlib
+langgraph
+langchain_core
