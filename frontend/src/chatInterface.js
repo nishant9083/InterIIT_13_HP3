@@ -16,9 +16,10 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
-import { FaMicrophone } from "react-icons/fa6";
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import LightModeIcon from '@mui/icons-material/LightMode';
+import { FaFile, FaMicrophone } from "react-icons/fa6";
+import { MdAttachFile } from "react-icons/md";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 import ListItemText from "@mui/material/ListItemText";
 import { BsFillSendFill } from "react-icons/bs";
 import HistoryIcon from "@mui/icons-material/History";
@@ -29,9 +30,9 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 import MessageIcon from "@mui/icons-material/Message";
 import PersonIcon from "@mui/icons-material/Person";
 import Avatar from "@mui/material/Avatar";
-import io from 'socket.io-client';
+import io from "socket.io-client";
 
-
+import CloseIcon from "@mui/icons-material/Close";
 const drawerWidth = 240;
 
 const openedMixin = (theme) => ({
@@ -105,23 +106,64 @@ export default function MiniDrawer() {
   const [messages, setMessages] = useState([]);
   const [history, setHistory] = useState([]);
   const [inputValue, setInputValue] = useState("");
+  const [file, setFile] = useState(null);
   const [socket, setSocket] = useState(null);
   const messagesEndRef = useRef(null); // For smooth scrolling
   const inputValueRef = useRef(null); // For smooth scrolling
   const [isFocused, setIsFocused] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [themeType, setThemeType] = useState('light');
+  const [themeType, setThemeType] = useState("light");
   const [isFirstRes, setIsFirstRes] = useState(true);
+
+  const fileInputRef = useRef(null);
 
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
 
   useEffect(() => {
-    setThemeType(() => { return prefersDarkMode ? 'dark' : 'light' });
+    setThemeType(() => {
+      return prefersDarkMode ? "dark" : "light";
+    });
   }, [prefersDarkMode]);
   useEffect(() => {
-    let ws = io('http://localhost:5000');
+    let ws = io("http://localhost:5000");
     setSocket(ws);
   }, []);
+
+  const CHUNK_SIZE = 64 * 1024;  // 64 KB chunks
+
+  const sendFileInChunks = (file) => {
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    let currentChunk = 0;
+
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      const base64Chunk = event.target.result.split(',')[1];  // Extract base64 data
+      socket.emit('file_chunk', {
+        chunk: base64Chunk,
+        chunkNumber: currentChunk,
+        totalChunks: totalChunks,
+        fileName: file.name,
+        fileType: file.type
+      });
+
+      currentChunk += 1;
+      if (currentChunk < totalChunks) {
+        loadNextChunk();
+      } else {
+        socket.emit('file_complete', { fileName: file.name });
+      }
+    };
+
+    const loadNextChunk = () => {
+      const start = currentChunk * CHUNK_SIZE;
+      const end = Math.min(file.size, start + CHUNK_SIZE);
+      const blob = file.slice(start, end);
+      reader.readAsDataURL(blob);  // Read next chunk as base64
+    };
+
+    loadNextChunk();  // Start reading the first chunk
+  };
 
   const Usertheme = React.useMemo(
     () =>
@@ -138,6 +180,23 @@ export default function MiniDrawer() {
 
   useEffect(() => {
     const handleResponse = (data) => {
+      const newChunk = data.status;
+      // alert(newChunk);
+    }
+ 
+
+    socket && socket.on("file-status", handleResponse);
+
+    return () => {
+      if (socket) {
+        socket.off("file-status", handleResponse);
+      }
+    };
+  }, [socket]);
+    
+
+  useEffect(() => {
+    const handleResponse = (data) => {
       const newChunk = data.message;
       // setMessages((prevMessages) => {
       //   // const lastMessage = prevMessages[prevMessages.length - 1];
@@ -150,27 +209,29 @@ export default function MiniDrawer() {
       //     return [...prevMessages, { content: newChunk, sender: "server" }];
       //   // }
       // });
-      console.log(messages)
+      console.log(messages);
       // if(messages === null)
-        // messages = []
-      messages && setMessages(prevMessages => {
-        const newMessages = [...prevMessages];
-        newMessages[1] = [...newMessages[1],{ content: newChunk, sender: "server" }];
-        return newMessages;
-      });
-      console.log(messages)
+      // messages = []
+      messages &&
+        setMessages((prevMessages) => {
+          const newMessages = [...prevMessages];
+          newMessages[1] = [
+            ...newMessages[1],
+            { content: newChunk, sender: "server" },
+          ];
+          return newMessages;
+        });
+      console.log(messages);
     };
-  
-    socket && socket.on('response', handleResponse);
-  
+
+    socket && socket.on("response", handleResponse);
+
     return () => {
       if (socket) {
-        socket.off('response', handleResponse);
+        socket.off("response", handleResponse);
       }
     };
   }, [socket]); // Add dependencies if needed
-  
-
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -182,34 +243,45 @@ export default function MiniDrawer() {
 
   const sendMessage = () => {
     if (socket && inputValue.trim() !== "") {
+      const messageData = {
+        message: inputValue,
+        file: null,
+      };
+
       const message = {
         content: inputValue,
         sender: "user",
       };
       if (messages.length === 0) {
         const id = new Date().toISOString();
-        setMessages(prevState => {
-          return [id, [message]]
+        setMessages((prevState) => {
+          return [id, [message]];
         });
-        
-      }
-      else {
-        setMessages(prevMessages => {
+      } else {
+        setMessages((prevMessages) => {
           const newMessages = [...prevMessages];
           newMessages[1] = [...newMessages[1], message];
           return newMessages;
         });
-        
+
         // messages[1].push({ content: '', sender: "server" });
       }
+      if (file) {        
+        socket.emit('file_start', { fileName: file.name, text: inputValue });  // Notify server of new file transfer
+        sendFileInChunks(file);
+        setFile(null);  // Clear file after sending
+        fileInputRef.current.value = null;        
+      }
+      socket.emit("message", inputValue);
+      // Clear the input after sending
       setInputValue("");
-      socket.emit('message', inputValue);
     }
   };
 
   const handleMicrophoneClick = () => {
-    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
 
       recognition.onstart = () => {
@@ -218,9 +290,9 @@ export default function MiniDrawer() {
 
       recognition.onresult = (event) => {
         const transcript = Array.from(event.results)
-          .map(result => result[0])
-          .map(result => result.transcript)
-          .join('');
+          .map((result) => result[0])
+          .map((result) => result.transcript)
+          .join("");
         setInputValue(transcript);
         setIsListening(false);
       };
@@ -231,15 +303,27 @@ export default function MiniDrawer() {
 
       recognition.start();
     } else {
-      alert('Your browser does not support speech recognition.');
+      alert("Your browser does not support speech recognition.");
     }
   };
   const handleThemeChange = () => {
-    setThemeType(themeType === 'light' ? 'dark' : 'light');
+    setThemeType(themeType === "light" ? "dark" : "light");
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setFile(file);
+      console.log(file);
+    }
+  };
+  const handleRemoveFile = () => {
+    setFile(null);
+    fileInputRef.current.value = null;
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   return (
@@ -308,15 +392,14 @@ export default function MiniDrawer() {
             <ListItem key={1} disablePadding sx={{ display: "block" }}>
               <ListItemButton
                 onClick={() => {
-                  if (messages.length < 1)
-                    return;
-                  const historyId = history.length > 0 ? history.map(item => item[0]) : [];
+                  if (messages.length < 1) return;
+                  const historyId =
+                    history.length > 0 ? history.map((item) => item[0]) : [];
                   if (historyId.includes(messages[0])) {
                     const index = history.indexOf(messages[0]);
                     history[index] = messages;
                     setMessages([]);
-                  }
-                  else {
+                  } else {
                     history.push(messages);
                     setMessages([]);
                   }
@@ -369,45 +452,57 @@ export default function MiniDrawer() {
                   sx={{ opacity: open ? 1 : 0 }}
                 />
               </ListItemButton>
-              <Box className={`${!open ? "hidden" : ""} ml-6 mr-6  overflow-y-auto custom-scrollbar max-h-32`}>
+              <Box
+                className={`${
+                  !open ? "hidden" : ""
+                } ml-6 mr-6  overflow-y-auto custom-scrollbar max-h-32`}
+              >
                 <List className="m-auto space-y-2">
-                  {history.length > 0 && history.map((chat, index) => (
-                    <ListItem key={chat[0]} disablePadding sx={{ display: "block" }} className={`p-1 rounded-md hover:bg-slate-500 hover:cursor-pointer overflow-hidden text-ellipsis
+                  {history.length > 0 &&
+                    history.map((chat, index) => (
+                      <ListItem
+                        key={chat[0]}
+                        disablePadding
+                        sx={{ display: "block" }}
+                        className={`p-1 rounded-md hover:bg-slate-500 hover:cursor-pointer overflow-hidden text-ellipsis
                     ${chat[0] === messages[0] ? "bg-slate-500" : ""}
                     `}
-                      onClick={() => {
-                        if (messages.length < 1) {
-                          // Set messages to clicked item messages
-                          setMessages(chat);
-                          return;
-                        }
-                        const currentId = messages.length > 0 ? messages[0] : "";
-                        const historyId = history.length > 0 ? history.map(item => item[0]) : [];
+                        onClick={() => {
+                          if (messages.length < 1) {
+                            // Set messages to clicked item messages
+                            setMessages(chat);
+                            return;
+                          }
+                          const currentId =
+                            messages.length > 0 ? messages[0] : "";
+                          const historyId =
+                            history.length > 0
+                              ? history.map((item) => item[0])
+                              : [];
 
-                        if (historyId.includes(currentId)) {
-                          // Set messages to clicked item messages
-                          setMessages(chat);
-                        } else {
-                          // Add messages to history
-                          history.push(messages);
-                          setMessages(chat);
-                        }
-                      }
-                      }
-                    >
-                      {chat[1][0].content}
-                    </ListItem>
-                  ))}
+                          if (historyId.includes(currentId)) {
+                            // Set messages to clicked item messages
+                            setMessages(chat);
+                          } else {
+                            // Add messages to history
+                            history.push(messages);
+                            setMessages(chat);
+                          }
+                        }}
+                      >
+                        {chat[1][0].content}
+                      </ListItem>
+                    ))}
                 </List>
               </Box>
             </ListItem>
-
           </List>
           <Divider />
           <List>
-
             <ListItem key={1} disablePadding sx={{ display: "block" }}>
-              <ListItemButton onClick={handleThemeChange} title="Change Theme"
+              <ListItemButton
+                onClick={handleThemeChange}
+                title="Change Theme"
                 sx={{
                   minHeight: 48,
                   justifyContent: open ? "initial" : "center",
@@ -421,11 +516,18 @@ export default function MiniDrawer() {
                     justifyContent: "center",
                   }}
                 >
-                  <IconButton >
-                    {themeType === 'dark' ? <DarkModeIcon /> : <LightModeIcon />}
+                  <IconButton>
+                    {themeType === "dark" ? (
+                      <DarkModeIcon />
+                    ) : (
+                      <LightModeIcon />
+                    )}
                   </IconButton>
                 </ListItemIcon>
-                <ListItemText primary={themeType === 'light' ? 'Light Mode' : 'Dark Mode'} sx={{ opacity: open ? 1 : 0 }} />
+                <ListItemText
+                  primary={themeType === "light" ? "Light Mode" : "Dark Mode"}
+                  sx={{ opacity: open ? 1 : 0 }}
+                />
               </ListItemButton>
             </ListItem>
           </List>
@@ -481,10 +583,15 @@ export default function MiniDrawer() {
                     sx={{ wordBreak: "break-word", textWrap: "wrap" }}
                     key={index}
                     className={`p-2 rounded-lg font-google-sans break-words 
-                             ${message.sender === "user"
-                        ? "bg-blue-500 text-white dark:bg-blue-500 max-w-fit"
-                        : `${themeType==='light'?'text-black':'text-white'} max-w-full`
-                      }`}
+                             ${
+                               message.sender === "user"
+                                 ? "bg-blue-500 text-white dark:bg-blue-500 max-w-fit"
+                                 : `${
+                                     themeType === "light"
+                                       ? "text-black"
+                                       : "text-white"
+                                   } max-w-full`
+                             }`}
                   >
                     {renderMessageContent(message.content)}
                   </Box>
@@ -511,8 +618,34 @@ export default function MiniDrawer() {
           }}
           className="flex justify-center items-center py-2"
         >
-          <Box className={`flex w-full max-w-screen-md rounded-3xl ${inputValue.split("\n").length > 1 ? "rounded-xl" : "rounded-full"
-            }shadow-gray-400 dark:bg-gray-700 text-white dark:text-white dark:border-gray-600`}>
+          <Box
+            className={`flex w-full max-w-screen-md rounded-3xl ${
+              inputValue.split("\n").length > 1 ? "rounded-xl" : "rounded-full"
+            }shadow-gray-400 dark:bg-gray-700 text-white dark:text-white dark:border-gray-600`}
+          >
+            <Box className="flex items-center pl-2">
+              <MdAttachFile
+                onClick={() => fileInputRef.current.click()}
+                className="h-6 w-6 hover:rounded-full text-black dark:text-white cursor-pointer hover:bg-slate-500 "
+              />
+              <input
+                type="file"
+                accept=".pdf"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+              {file && (
+                <Box className="flex items-center ml-2">
+                  <Typography variant="body2" className="mr-2">
+                    {file.name}
+                  </Typography>
+                  <IconButton onClick={handleRemoveFile}>
+                    <CloseIcon />
+                  </IconButton>
+                </Box>
+              )}
+            </Box>
             <TextareaAutosize
               ref={inputValueRef}
               placeholder="Enter your message..."
@@ -539,14 +672,29 @@ export default function MiniDrawer() {
               onBlur={() => setIsFocused(false)} // Set isFocused to false when the textarea loses focus
               wrap="soft"
               className={`flex-grow resize-none px-4 py-4 
-               custom-scrollbar  bg-inherit ${inputValue.split("\n").length > 1 ? "rounded-xl" : "rounded-full"
-                }
+               custom-scrollbar  bg-inherit ${
+                 inputValue.split("\n").length > 1
+                   ? "rounded-xl"
+                   : "rounded-full"
+               }
               outline-none focus:outline-none w-full dark:text-white dark:border-gray-600 dark:placeholder-gray-400 transition duration-300`}
             />
-            <Box className={`flex  items-end pb-4 pl-1 pr-3 space-x-4 bg-inherit ${inputValue.split("\n").length > 1 ? "rounded-xl" : "rounded-full"
-              }`} >
-              <FaMicrophone onClick={handleMicrophoneClick} className="h-6 w-6 hover:cursor-pointer hover:text-green-600 text-white text-black" color={isListening ? 'red' : ''} />
-              <BsFillSendFill onClick={sendMessage} className="h-6 w-6  text-white  hover:cursor-pointer hover:text-green-600" />
+            <Box
+              className={`flex  items-end pb-4 pl-1 pr-3 space-x-4 bg-inherit ${
+                inputValue.split("\n").length > 1
+                  ? "rounded-xl"
+                  : "rounded-full"
+              }`}
+            >
+              <FaMicrophone
+                onClick={handleMicrophoneClick}
+                className="h-6 w-6 hover:cursor-pointer hover:text-green-600 dark:text-white text-black"
+                color={isListening ? "red" : ""}
+              />
+              <BsFillSendFill
+                onClick={sendMessage}
+                className="h-6 w-6  text-white  hover:cursor-pointer hover:text-green-600"
+              />
             </Box>
           </Box>
         </Box>

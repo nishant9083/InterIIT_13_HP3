@@ -11,3 +11,5 @@ langchain_experimental
 matplotlib
 langgraph
 langchain_core
+faiss-cpu
+pypdf
