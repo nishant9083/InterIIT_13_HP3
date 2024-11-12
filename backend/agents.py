@@ -1,5 +1,12 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from tools import tavily_tool, python_repl, retrieve_documents, date_tool, user_file_retriever_tool
+from tools import (
+    tavily_tool,
+    python_repl,
+    retrieve_documents,
+    date_tool,
+    user_file_retriever_tool,
+    duckduckgo_search
+)
 from langchain_core.messages import (
     ToolMessage,
     AIMessage,
@@ -14,12 +21,11 @@ def create_agent(llm, tools, system_message: str):
         [
             (
                 "system",
-                "You are a helpful AI assistant, collaborating with other assistants."
-                " Use the provided tools to progress towards answering the question."
-                " If you are unable to fully answer, that's OK, another assistant with different tools "
-                " will help where you left off. Execute what you can to make progress."
-                " If you or any of the other assistants have the final answer or deliverable,"
-                " prefix your response with FINAL ANSWER so the team knows to stop."
+                "You are a Financial Agent in a multi-agent system, responsible for assisting with complex financial analysis, reporting, and strategic decision-making."
+                " Use the provided tools for market analysis, financial modeling, data visualization, and trend forecasting to provide accurate, data-driven insights."
+                " If you are unable to fully answer, another agent with different tools will assist where you left off."
+                " Execute what you can to make progress and provide tailored financial advice and actionable solutions."
+                " If you or any of the other agents have the final answer or deliverable, prefix your response with 'FINAL ANSWER:' so the team knows to stop."
                 " You have access to the following tools: {tool_names}.\n{system_message}",
             ),
             MessagesPlaceholder(variable_name="messages"),
@@ -34,10 +40,6 @@ def agent_node(state, agent, name):
     """
     Define Agent Nodes
     """
-    # isFileUploaded = state.get("messages", False)
-    # if isFileUploaded:
-        # retriever = state["retriever"]
-    # print(isFileUploaded, "hi rohan")
     result = agent.invoke(state)
     # We convert the agent output into a format that is suitable to append to the global state
     if isinstance(result, ToolMessage):
@@ -50,6 +52,7 @@ def agent_node(state, agent, name):
         # track the sender so we know who to pass to next.
         "sender": name,
     }
+
 
 router_agent = create_agent(
     llm,
@@ -81,33 +84,44 @@ router_agent = create_agent(
     - **Workflow Management:** Ensure the conversation progresses smoothly by directing it to the appropriate agent or tool.
     - **User File Handling:** If the user uploads a file, call the `user_file_retriever_tool` to search for relevant documents.
     - **State Tracking:** Keep track of the conversation state and the sender to determine the next step accurately.    
-    """
+    """,
 )
 
 researcher_agent = create_agent(
     llm,
-    [retrieve_documents, date_tool],
-    system_message="""You are a researcher agent responsible for either directly answering user queries or initiating document retrieval. Your primary focus is on providing quick and efficient responses.
+    [retrieve_documents,user_file_retriever_tool, date_tool, python_repl],
+    system_message="""You are a financial researcher agent responsible for either directly answering user queries or initiating document retrieval. Your primary focus is on providing quick and efficient responses. If you are unsure about the answer, especially for queries containing financial terms you don't understand, use the `retrieve_documents` tool to search for relevant documents. If the query doesn't align with your task, pass the state to the next agent.
 
 Here's your workflow:
 
 1. **Direct Answer:**
-   - If you are confident that you know the answer to the user's query based on your own knowledge, provide the answer directly. 
+   - If you are confident that you know the answer to the user's query based on your own knowledge, provide the answer directly.
    - Be concise and accurate in your response.
    - Prefix your response with "FINAL ANSWER:" to indicate that the workflow should end and this is the final answer.
 
 2. **Retrieve Documents:**
-   - If you are unsure about the answer or require additional information, use the `retrieve_documents` tool to search for relevant documents.
+   - If you are unsure about the answer or require additional information, especially for queries containing financial terms, use the `retrieve_documents` tool to search for relevant documents.
    - Do not attempt to answer the question yourself using retrieved documents. Simply call the tool and pass the state to the next agent.
+   - If you encounter errors during document retrieval, pass the state to the next agent.
 
 3. **User Provided Files:**
-   - If a file is uploaded (indicated by `isFileUploaded` being True and `retriever` containing retriever), use the `retrieve_documents` tool to process the file and extract relevant information.
+   - If a file is uploaded (indicated by `isFileUploaded` being True and `retriever` containing retriever), use the `user_file_retriever_tool` to process the file and extract relevant information.
    - Pass the extracted information to the next agent for further processing.
 
 4. **Date and Time:**
-    - Use this tool to modify the query or retrieve latest/additional information.
+    - Use this tool to modify the query or retrieve the latest/additional information.
     - If the user asks for the current date and time, use the `date_tool` to provide this information.
     - This tool can be used to provide context or additional information to the user.
+
+5. **Python REPL:**
+    - If you need to execute Python code to gather information or perform specific tasks, use the `python_repl` tool.
+    - Provide the code snippet as input to the tool and use the output to enhance your response.
+    - If your Python code generates a plot, it will be saved and the file path will be provided in the output.
+    - If the saved file path is provided, and you have completed all tasks, respond as
+     ``` FINAL ANSWER:
+        file_path: <file_path>,
+        answer: <your answer>.
+     ```
 
 Important Considerations:
 
@@ -117,17 +131,17 @@ Important Considerations:
 
 Example:
 
-User: What is the capital of France?
-Agent: FINAL ANSWER: Paris
-
-User: What are the main causes of climate change?
+User: What is the current stock price of Apple Inc.?
 Agent: (Calls `retrieve_documents` tool to search for relevant documents)
+
+User: What is the capital of France?
+Agent: FINAL ANSWER: Ask me about financial terms or concepts for accurate answers.
 """,
 )
 
 document_processor_agent = create_agent(
     llm,
-    [tavily_tool, date_tool],
+    [tavily_tool, duckduckgo_search ,date_tool, python_repl],
     system_message="""You are a document processor agent designed to analyze retrieved documents and answer user queries based on their content. 
 
 Here's your workflow:
@@ -138,9 +152,10 @@ Here's your workflow:
     - Synthesize a concise and accurate answer based on the information found in the documents.
     - Prefix your response with "FINAL ANSWER:" to indicate that the workflow should end and this is the final answer.
 
-2. **Tavily Search:**
-    - If the retrieved documents do not provide sufficient information to answer the query, use the `tavily_tool` to perform a web search.
+2. **Tavily Search or DuckDuck Search:**
+    - If the retrieved documents do not provide sufficient information to answer the query, use the `tavily_tool` or `duckduckgo_search` to perform a web search.
     - Analyze the search results and synthesize an answer based on the information you find.
+    - If one tool does not provide satisfactory results, you can try the other tool to gather more information.
     - Cite the source of the information in your response (e.g., "According to [source name]...").
     - Prefix your response with "FINAL ANSWER:" to indicate that the workflow should end and this is the final answer.
 
@@ -149,6 +164,15 @@ Here's your workflow:
     - If the user asks for the current date and time, use the `date_tool` to provide this information.
     - This tool can be used to provide context or additional information to the user or to modify query to get latest information from search tool.
 
+5 **Python REPL:**
+    - If you need to execute Python code to gather information or perform specific tasks, use the `python_repl` tool.
+    - Provide the code snippet as input to the tool and use the output to enhance your response.
+    - If your Python code generates a plot, it will be saved and the file path will be provided in the output.
+    - If saved file path is provided, and you have completed all tasks, respond as
+     ``` FINAL ANSWER:
+        file_path: <file_path>,
+        answer: <your answer>.
+     ```
 Important Considerations:
 
 * **Accuracy:** Prioritize accuracy. Ensure your answer is supported by the information in the retrieved documents or the Tavily search results.
@@ -168,7 +192,7 @@ Example:
 
 synthesizer_agent = create_agent(
     llm,
-    [date_tool],
+    [date_tool, python_repl],
     system_message="""You are a synthesizer agent, the final step in an information gathering and answering process. Your task is to carefully consider all previous information and either synthesize a comprehensive and final answer to the user's original query or refine the query for the next iteration.
 
                     Here's your workflow:
@@ -192,6 +216,16 @@ synthesizer_agent = create_agent(
                         - Use this tool to modify the query or retrieve latest information.
                         - If the user asks for the current date and time, use the `date_tool` to provide this information.
                         - This tool can be used to provide context or additional information to the user or to modify the query to get the latest information.
+
+                    4 **Python REPL:**
+                        - If you need to execute Python code to gather information or perform specific tasks, use the `python_repl` tool to get the result.
+                        - Provide the code snippet as input to the tool and use the output to enhance your response.
+                        - If your Python code generates a plot, it will be saved and the file path will be provided in the output.
+                        - If saved file path is provided, and you have completed all tasks, respond as
+                        ``` FINAL ANSWER:
+                            file_path: <file_path>,
+                            answer: <your answer>.
+                        ```
 
                     Important Considerations:
 

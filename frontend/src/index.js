@@ -1,22 +1,18 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom'; // Import BrowserRouter, Switch, and Route
-import './index.css';
-import App from './App';
-import MessageInterface from './bot';
-import reportWebVitals from './reportWebVitals';
-import MiniDrawer from './chatInterface';
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import "./index.css";
+import App from "./App";
+import reportWebVitals from "./reportWebVitals";
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const container = document.getElementById("root");
+
+const root = createRoot(container);
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App/>} /> {/* Add a route for the root path */}
-        <Route path="/chatI" element = {<MessageInterface/>}/>
-        <Route path="/chat" element = {<MiniDrawer/>}/>
-      </Routes>
-    </BrowserRouter>
+    {/* <BrowserRouter> */}
+      <App />
+    {/* </BrowserRouter> */}
   </React.StrictMode>
 );
 

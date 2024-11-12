@@ -2,8 +2,7 @@ import * as React from "react";
 import { styled, useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import { TextareaAutosize } from "@mui/material";
-import MuiDrawer from "@mui/material/Drawer";
-import MuiAppBar from "@mui/material/AppBar";
+
 import Toolbar from "@mui/material/Toolbar";
 import List from "@mui/material/List";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -24,7 +23,7 @@ import ListItemText from "@mui/material/ListItemText";
 import { BsFillSendFill } from "react-icons/bs";
 import HistoryIcon from "@mui/icons-material/History";
 import { useState, useEffect, useRef } from "react";
-import renderMessageContent from "./RenderMarkdown";
+import renderMessageContent from "../utils/RenderMarkdown";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import MessageIcon from "@mui/icons-material/Message";
@@ -33,74 +32,10 @@ import Avatar from "@mui/material/Avatar";
 import io from "socket.io-client";
 
 import CloseIcon from "@mui/icons-material/Close";
-const drawerWidth = 240;
+import { AppBar, Drawer, DrawerHeader } from "../components/Drawer";
+import handleMicrophoneClick from "../utils/speech_recognition";
 
-const openedMixin = (theme) => ({
-  width: drawerWidth,
-  transition: theme.transitions.create("width", {
-    easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.enteringScreen,
-  }),
-  overflowX: "hidden",
-});
-
-const closedMixin = (theme) => ({
-  transition: theme.transitions.create("width", {
-    easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.leavingScreen,
-  }),
-  overflowX: "hidden",
-  width: `calc(${theme.spacing(7)} + 1px)`,
-  [theme.breakpoints.up("sm")]: {
-    width: `calc(${theme.spacing(8)} + 1px)`,
-  },
-});
-
-const DrawerHeader = styled("div")(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-end",
-  padding: theme.spacing(0, 1),
-  // necessary for content to be below app bar
-  ...theme.mixins.toolbar,
-}));
-
-const AppBar = styled(MuiAppBar, {
-  shouldForwardProp: (prop) => prop !== "open",
-})(({ theme, open }) => ({
-  zIndex: theme.zIndex.drawer + 1,
-  transition: theme.transitions.create(["width", "margin"], {
-    easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.leavingScreen,
-  }),
-  ...(open && {
-    marginLeft: drawerWidth,
-    width: `calc(100% - ${drawerWidth}px)`,
-    transition: theme.transitions.create(["width", "margin"], {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  }),
-}));
-
-const Drawer = styled(MuiDrawer, {
-  shouldForwardProp: (prop) => prop !== "open",
-})(({ theme, open }) => ({
-  width: drawerWidth,
-  flexShrink: 0,
-  whiteSpace: "nowrap",
-  boxSizing: "border-box",
-  ...(open && {
-    ...openedMixin(theme),
-    "& .MuiDrawer-paper": openedMixin(theme),
-  }),
-  ...(!open && {
-    ...closedMixin(theme),
-    "& .MuiDrawer-paper": closedMixin(theme),
-  }),
-}));
-
-export default function MiniDrawer() {
+export default function MessageInterface() {
   const theme = useTheme();
   const [open, setOpen] = React.useState(false);
   const [messages, setMessages] = useState([]);
@@ -114,7 +49,8 @@ export default function MiniDrawer() {
   const [isListening, setIsListening] = useState(false);
   const [themeType, setThemeType] = useState("light");
   const [isFirstRes, setIsFirstRes] = useState(true);
-
+  const imageChunksRef = useRef([]);
+  const [imageSrc, setImageSrc] = useState([]);
   const fileInputRef = useRef(null);
 
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
@@ -129,7 +65,7 @@ export default function MiniDrawer() {
     setSocket(ws);
   }, []);
 
-  const CHUNK_SIZE = 64 * 1024;  // 64 KB chunks
+  const CHUNK_SIZE = 64 * 1024; // 64 KB chunks
 
   const sendFileInChunks = (file) => {
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
@@ -138,20 +74,20 @@ export default function MiniDrawer() {
     const reader = new FileReader();
 
     reader.onload = (event) => {
-      const base64Chunk = event.target.result.split(',')[1];  // Extract base64 data
-      socket.emit('file_chunk', {
+      const base64Chunk = event.target.result.split(",")[1]; // Extract base64 data
+      socket.emit("file_chunk", {
         chunk: base64Chunk,
         chunkNumber: currentChunk,
         totalChunks: totalChunks,
         fileName: file.name,
-        fileType: file.type
+        fileType: file.type,
       });
 
       currentChunk += 1;
       if (currentChunk < totalChunks) {
         loadNextChunk();
       } else {
-        socket.emit('file_complete', { fileName: file.name });
+        socket.emit("file_complete", { fileName: file.name });
       }
     };
 
@@ -159,10 +95,10 @@ export default function MiniDrawer() {
       const start = currentChunk * CHUNK_SIZE;
       const end = Math.min(file.size, start + CHUNK_SIZE);
       const blob = file.slice(start, end);
-      reader.readAsDataURL(blob);  // Read next chunk as base64
+      reader.readAsDataURL(blob); // Read next chunk as base64
     };
 
-    loadNextChunk();  // Start reading the first chunk
+    loadNextChunk(); // Start reading the first chunk
   };
 
   const Usertheme = React.useMemo(
@@ -178,12 +114,12 @@ export default function MiniDrawer() {
     [themeType]
   );
 
+
   useEffect(() => {
     const handleResponse = (data) => {
       const newChunk = data.status;
       // alert(newChunk);
-    }
- 
+    };
 
     socket && socket.on("file-status", handleResponse);
 
@@ -193,7 +129,6 @@ export default function MiniDrawer() {
       }
     };
   }, [socket]);
-    
 
   useEffect(() => {
     const handleResponse = (data) => {
@@ -233,6 +168,45 @@ export default function MiniDrawer() {
     };
   }, [socket]); // Add dependencies if needed
 
+
+  useEffect(() => {
+    // Listen for image chunks
+    socket && socket.on('response_chunk', (data) => {
+      console.log('Received image chunk:', data.chunk);
+      imageChunksRef.current = [...imageChunksRef.current, data.chunk];
+    });
+
+    // Listen for the complete response
+    socket && socket.on('response_complete', (data) => { 
+      console.log('Received complete image:', imageChunksRef.current.join(''));     
+      const completeImage = imageChunksRef.current.join('');
+      console.log("image data",completeImage)
+      setImageSrc((prevSrc) => [...prevSrc, `data:image/jpeg;base64,${completeImage}`]);
+      console.log(data.message); // Handle the message if needed
+
+      messages &&
+        setMessages((prevMessages) => {
+          const newMessages = [...prevMessages];
+          newMessages[1] = [
+            ...newMessages[1],
+            { content: data.message, image: `data:image/jpeg;base64,${completeImage}` ,sender: "server" },
+          ];
+          return newMessages;
+        });
+      // Clear image chunks after receiving the complete image
+      imageChunksRef.current = [];      
+    });
+
+    // Clean up the event listeners on component unmount
+    return () => {
+      if(socket) {
+      socket.off('response_chunk');
+      socket.off('response_complete');
+      }
+    };
+  }, [socket]);
+
+
   const handleDrawerOpen = () => {
     setOpen(true);
   };
@@ -266,46 +240,19 @@ export default function MiniDrawer() {
 
         // messages[1].push({ content: '', sender: "server" });
       }
-      if (file) {        
-        socket.emit('file_start', { fileName: file.name, text: inputValue });  // Notify server of new file transfer
+      if (file && inputValue.trim() !== "") {
+        socket.emit("file_start", { fileName: file.name, text: inputValue }); // Notify server of new file transfer
         sendFileInChunks(file);
-        setFile(null);  // Clear file after sending
-        fileInputRef.current.value = null;        
+        setFile(null); // Clear file after sending
+        fileInputRef.current.value = null;
+      } else {
+        socket.emit("message", inputValue);
+        // Clear the input after sending
       }
-      socket.emit("message", inputValue);
-      // Clear the input after sending
       setInputValue("");
     }
   };
 
-  const handleMicrophoneClick = () => {
-    if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map((result) => result[0])
-          .map((result) => result.transcript)
-          .join("");
-        setInputValue(transcript);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.start();
-    } else {
-      alert("Your browser does not support speech recognition.");
-    }
-  };
   const handleThemeChange = () => {
     setThemeType(themeType === "light" ? "dark" : "light");
   };
@@ -363,7 +310,7 @@ export default function MiniDrawer() {
               noWrap
               component="div"
             >
-              Naina
+              R2R
             </Typography>
           </Toolbar>
         </AppBar>
@@ -573,7 +520,7 @@ export default function MiniDrawer() {
                   {message.sender === "server" && (
                     <Avatar>
                       <img
-                        className="h-full w-full"
+                        className="h-full w-[70%] rounded-md"
                         src="https://img.icons8.com/fluency/48/message-bot.png"
                         alt="message-bot"
                       />
@@ -594,6 +541,7 @@ export default function MiniDrawer() {
                              }`}
                   >
                     {renderMessageContent(message.content)}
+                    {message.image && <img src={message.image} alt="Received" />}
                   </Box>
                   {message.sender === "user" && (
                     <Avatar sx={{ marginLeft: "0.5rem" }}>
@@ -636,7 +584,7 @@ export default function MiniDrawer() {
                 onChange={handleFileChange}
               />
               {file && (
-                <Box className="flex items-center ml-2">
+                <Box className="flex items-center ml-2 rounded-md bg-slate-600 pl-1">
                   <Typography variant="body2" className="mr-2">
                     {file.name}
                   </Typography>
@@ -687,7 +635,13 @@ export default function MiniDrawer() {
               }`}
             >
               <FaMicrophone
-                onClick={handleMicrophoneClick}
+                onClick={() =>
+                  handleMicrophoneClick(
+                    isListening,
+                    setIsListening,
+                    setInputValue
+                  )
+                }
                 className="h-6 w-6 hover:cursor-pointer hover:text-green-600 dark:text-white text-black"
                 color={isListening ? "red" : ""}
               />
@@ -699,7 +653,6 @@ export default function MiniDrawer() {
           </Box>
         </Box>
       </Box>
-      {/* </Box> */}
     </ThemeProvider>
   );
 }

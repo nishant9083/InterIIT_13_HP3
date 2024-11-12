@@ -13,3 +13,4 @@ langgraph
 langchain_core
 faiss-cpu
 pypdf
+duckduckgo-search

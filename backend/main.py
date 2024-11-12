@@ -1,13 +1,14 @@
 from typing import List
 from flask import Flask, request  
 from flask_socketio import SocketIO 
-from gemini import run_workflow
+from workflow import run_workflow
 import base64
 import os
 from online_data_process import create_retriever_from_pdf
-from dotenv import load_dotenv
+import re
 
-load_dotenv("./.env")
+from dotenv import load_dotenv
+load_dotenv(".env")
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -15,15 +16,50 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 retriever = None
 
 def gemini_response(query):
-    # retriever
-    while retriever is None:
-        continue
+    """
+    Processes a query and emits responses via socket.io.
+    This function runs a workflow with the given query and retrieves a response.
+    It then extracts file path and answer from the response. If a file path is found,
+    it reads the file, encodes it in base64, and emits it in chunks via socket.io.
+    Finally, it emits a complete response message. If no file path is found, it emits
+    the answer directly.
+    Args:
+        query (str): The query to be processed.
+    Emits:
+        response_chunk (dict): A dictionary containing a chunk of the encoded image.
+        response_complete (dict): A dictionary containing the final message and image status.
+        response (dict): A dictionary containing the final message or error message.
+    Raises:
+        Exception: If an error occurs during processing.
+    """
+    try:
+        response = run_workflow(query, retriever)
+        print("Response:", response)
+        
+        file_path_match = re.search(r'file_path: (.*?),\n', response)
+        answer_match = re.search(r'answer: (.*)', response) # Extracted values 
+        file_path = file_path_match.group(1) if file_path_match else None
+        answer = answer_match.group(1) if answer_match else response
 
-    print(retriever, "hi nishant")
-    response = run_workflow(query, retriever)
-    print("Response:", response)
-    response = response.split("FINAL ANSWER:")[1].strip()
-    socketio.emit("response", {"message": response})
+        if file_path:                        
+            with open(file_path, "rb") as f:                
+                encoded_image = base64.b64encode(f.read()).decode("utf-8")
+                chunk_size = 1024 * 1024  # 1MB
+                for i in range(0, len(encoded_image), chunk_size):                    
+                    chunk = encoded_image[i:i + chunk_size]                    
+                    socketio.emit("response_chunk", {"chunk": chunk})
+                response = {
+                    "message": answer,
+                    # "image_complete": True
+                }                
+                socketio.emit("response_complete", response)
+        else:
+            response = response.split("FINAL ANSWER:")[1].strip()
+            socketio.emit("response", {"message": response})
+    except Exception as e:
+        print(f"Error processing query: {e}")
+        socketio.emit("response", {"message": f"Error processing query: {e}"})
+
 
 
 # Track uploaded files in memory for simplicity
@@ -56,28 +92,35 @@ def handle_file_chunk(data):
 
 @socketio.on('file_complete')
 def handle_file_complete(data):
-    global retriever
-    file_name = data['fileName']
-    if file_name in file_chunks:
-        # Sort chunks by chunk number and write to file
-        sorted_chunks = sorted(file_chunks[file_name]['chunks'], key=lambda x: x[0])
-        file_path = os.path.join("uploads", file_name)
-        
-        with open(file_path, "wb") as f:
-            for _, chunk in sorted_chunks:
-                f.write(chunk)
-        
-        print(f"File {file_name} assembled and saved.")
-        # Clean up file_chunks dictionary
-        del file_chunks[file_name]
-        retriever = create_retriever_from_pdf(file_path)        
+    try:
+        global retriever
+        file_name = data['fileName']
+        if file_name in file_chunks:
+            # Sort chunks by chunk number and write to file
+            sorted_chunks = sorted(file_chunks[file_name]['chunks'], key=lambda x: x[0])
+            file_path = os.path.join("uploads", file_name)
+            
+            with open(file_path, "wb") as f:
+                for _, chunk in sorted_chunks:
+                    f.write(chunk)
+            
+            print(f"File {file_name} assembled and saved.")
+            retriever = create_retriever_from_pdf(file_path)
+            gemini_response(file_chunks[file_name]['text'])
+            # Clean up file_chunks dictionary
+            del file_chunks[file_name]
 
-    socketio.emit('file-status', {'status': f'File {file_name} received and saved successfully.'})
+
+        # socketio.emit('file-status', {'status': f'File {file_name} received and saved successfully.'})
+    except Exception as e:
+        print(f"Error handling file: {e}")
+        socketio.emit('file-status', {'status': f'Error handling file: {e}'})
 
 
 @socketio.on("message")
 def handle_query(data):
     message = data
+    print("Query:", message)
     gemini_response(message)
 
     socketio.emit("end", {"message": "STOP"})
@@ -91,8 +134,7 @@ def handle_connect():
 
 @socketio.on("disconnect")
 def handle_disconnect():
-    print("Client disconnected")
-    os.system("rm -rf uploads/*")
+    print("Client disconnected")    
 
 
 
