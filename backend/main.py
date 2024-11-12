@@ -15,7 +15,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 retriever = None
 
-def gemini_response(query):
+def generate_response(query):
     """
     Processes a query and emits responses via socket.io.
     This function runs a workflow with the given query and retrieves a response.
@@ -106,7 +106,7 @@ def handle_file_complete(data):
             
             print(f"File {file_name} assembled and saved.")
             retriever = create_retriever_from_pdf(file_path)
-            gemini_response(file_chunks[file_name]['text'])
+            generate_response(file_chunks[file_name]['text'])
             # Clean up file_chunks dictionary
             del file_chunks[file_name]
 
@@ -121,7 +121,7 @@ def handle_file_complete(data):
 def handle_query(data):
     message = data
     print("Query:", message)
-    gemini_response(message)
+    generate_response(message)
 
     socketio.emit("end", {"message": "STOP"})
     # return 'Query received and processing.'
