@@ -1,0 +1,201 @@
+[
+    {
+        "query": "What is the status of the stock performance for the mentioned companies?",
+        "answer": "Stock Performance",
+        "question_type": "temporal_query",
+        "evidence_list": [
+            {
+                "url": "https://www.investing.com/news/company-news/ngne-stock-soars-to-52week-high-reaching-7372-amidst-surge-93CH-3714581",
+                "published_at": "2024-11-11T14:47:56+00:00",
+                "claim": "NGNE stock has reached a 52-week high of $73.72."
+            },
+            {
+                "url": "https://www.investing.com/news/company-news/prodex-stock-soars-to-alltime-high-of-468-amidst-robust-growth-93CH-3714579",
+                "published_at": "2024-11-11T14:46:29+00:00",
+                "claim": "Pro-Dex shares have reached an all-time high of $46.8."
+            },
+            {
+                "url": "https://www.investing.com/news/company-news/aroc-stock-hits-52week-high-at-2349-amid-robust-growth-93CH-3714574",
+                "published_at": "2024-11-11T14:45:56+00:00",
+                "claim": "Archrock Inc. stock has reached a 52-week high."
+            },
+            {
+                "url": "https://www.investing.com/news/company-news/blackrock-floating-rate-stock-hits-52week-high-at-1417-93CH-3714571",
+                "published_at": "2024-11-11T14:45:53+00:00",
+                "claim": "BlackRock Floating Rate Income Trust stock has reached a 52-week high, trading at $14.17."
+            }
+        ]
+    },
+    {
+        "query": "What do investors base their confidence on regarding Pro-Dex and Archrock?",
+        "answer": "Investor Confidence",
+        "question_type": "temporal_query",
+        "evidence_list": [
+            {
+                "url": "https://www.investing.com/news/company-news/prodex-stock-soars-to-alltime-high-of-468-amidst-robust-growth-93CH-3714579",
+                "published_at": "2024-11-11T14:46:29+00:00",
+                "claim": "Investors support Pro-Dex due to strong financial results and strategic initiatives."
+            },
+            {
+                "url": "https://www.investing.com/news/company-news/aroc-stock-hits-52week-high-at-2349-amid-robust-growth-93CH-3714574",
+                "published_at": "2024-11-11T14:45:56+00:00",
+                "claim": "Investors are confident in Archrock's market position and financial performance."
+            }
+        ]
+    },
+    {
+        "query": [
+            "Does Arena Holdings face financial difficulties due to excessive cash burn and short-term obligations exceeding liquid assets, while CNO Financial Group Inc has robust financial health with liquid assets exceeding short-term obligations?"
+        ],
+        "answer": [
+            "Yes"
+        ],
+        "question_type": [
+            "comparison_query"
+        ],
+        "evidence_list": [
+            {
+                "url": "https://www.investing.com/news/company-news/arena-holdings-stock-hits-52week-low-at-058-amid-downturn-93CH-3714577",
+                "published_at": "2024-11-11T14:46:17+00:00",
+                "claim": "Arena Holdings is facing financial difficulties due to excessive cash burn and short-term obligations exceeding liquid assets."
+            },
+            {
+                "url": "https://www.investing.com/news/company-news/cno-financial-stock-soars-to-alltime-high-of-3988-93CH-3714570",
+                "published_at": "2024-11-11T14:45:52+00:00",
+                "claim": "CNO Financial Group Inc has a robust financial health with liquid assets exceeding short-term obligations."
+            }
+        ]
+    },
+    {
+        "query": "What is the likelihood that Gilead Sciences Inc's stock price will experience a significant increase in the near future?",
+        "answer": "Yes",
+        "question_type": "temporal_query",
+        "evidence_list": [
+            {
+                "url": "https://www.investing.com/news/company-news/dnmr-stock-touches-52week-low-at-028-amid-market-challenges-93CH-3714576",
+                "published_at": "2024-11-11T14:46:17+00:00",
+                "claim": "Danimer Scientific, Inc. stock has reached a 52-week low, trading at $0.28."
+            },
+            {
+                "url": "https://www.investing.com/news/company-news/gilead-sciences-stock-hits-52week-high-at-9834-93CH-3714572",
+                "published_at": "2024-11-11T14:45:54+00:00",
+                "claim": "Gilead Sciences Inc's stock hit a 52-week high of $98.34."
+            }
+        ]
+    },
+    {
+        "query": [
+            "What significant corporate actions took place on November 11, 2024, according to the provided news articles?"
+        ],
+        "answer": [
+            "Acquisition"
+        ],
+        "question_type": [
+            "temporal_query"
+        ],
+        "evidence_list": [
+            {
+                "url": "https://www.investing.com/news/company-news/aroc-stock-hits-52week-high-at-2349-amid-robust-growth-93CH-3714574",
+                "published_at": "2024-11-11T14:45:56+00:00",
+                "claim": "Archrock completed the acquisition of Total Operations and Production Services."
+            },
+            {
+                "url": "https://www.ndtvprofit.com/business/ambuja-cements-seeks-cci-nod-to-acquire-majority-stake-in-orient-cement",
+                "published_at": "2024-11-11T13:26:27+00:00",
+                "claim": "Ambuja Cements Ltd. has sought approval from the Competition Commission of India to acquire a majority stake in Orient Cement Ltd."
+            }
+        ]
+    },
+    {
+        "query": [
+            "What is the overall financial performance trend based on the provided news articles?"
+        ],
+        "answer": [
+            "financial performance"
+        ],
+        "question_type": [
+            "comparison_query"
+        ],
+        "evidence_list": [
+            {
+                "url": "https://www.zeebiz.com/companies/news-global-distriparks-reports-18-drop-in-net-profit-to-rs-601-crore-325506",
+                "published_at": "2024-11-11T14:34:43+00:00",
+                "claim": "Global Distriparks Ltd reported an 18% drop in net profit to Rs 60.1 crore in the September quarter."
+            },
+            {
+                "url": "https://www.ndtvprofit.com/business/coca-cola-india-fy24-profit-falls-42-to-rs-420-crore",
+                "published_at": "2024-11-11T13:26:41+00:00",
+                "claim": "Coca-Cola India's profit declined by 42% in FY24."
+            }
+        ]
+    },
+    {
+        "query": "What actions has the Reserve Bank of India taken regarding foreign investments and gold bonds?",
+        "answer": "The Reserve Bank of India has issued an operational framework for reclassifying foreign portfolio investments to foreign direct investments in case of a breach of limits, and it has not issued fresh Sovereign Gold Bonds since February.",
+        "question_type": "comparison_query",
+        "evidence_list": [
+            {
+                "url": "https://www.zeebiz.com/economy-infra/news-rbi-reserve-bank-of-india-issues-framework-for-reclassification-of-fpi-to-fdi-foreign-direct-investment-325504",
+                "published_at": "2024-11-11T14:22:45+00:00",
+                "claim": "The Reserve Bank of India has issued an operational framework for reclassifying foreign portfolio investments to foreign direct investments in case of a breach of limits."
+            },
+            {
+                "url": "https://www.ndtvprofit.com/markets/gold-etf-inflows-in-october-high-gold-prices-lure-investors-to-proxy-investment",
+                "published_at": "2024-11-11T14:06:08+00:00",
+                "claim": "The Reserve Bank of India has not issued fresh Sovereign Gold Bonds since February."
+            }
+        ]
+    },
+    {
+        "query": [
+            "What were the Q2 results like for Motherson Wiring, according to Motilal Oswal Financial Services?"
+        ],
+        "answer": [
+            "Motilal Oswal Financial Services reviewed Motherson Wiring's Q2 results."
+        ],
+        "question_type": [
+            "comparison_query"
+        ],
+        "evidence_list": [
+            {
+                "url": [
+                    "https://www.ndtvprofit.com/research-reports/motherson-wiring-q2-results-review-start-up-costs-of-new-plants-hurt-performance-motilal-oswal"
+                ],
+                "published_at": [
+                    "2024-11-11T12:48:08+00:00"
+                ],
+                "claim": [
+                    "Motilal Oswal Financial Services reviewed Motherson Wiring's Q2 results."
+                ]
+            },
+            {
+                "url": [
+                    "https://www.ndtvprofit.com/research-reports/zen-technologies-q2-results-review-steady-performance-motilal-oswal"
+                ],
+                "published_at": [
+                    "2024-11-11T12:52:52+00:00"
+                ],
+                "claim": [
+                    "Motilal Oswal provides a review of Zen Technologies' Q2 results."
+                ]
+            }
+        ]
+    },
+    {
+        "query": "What were the impacts on Motherson Wiring's Q2 performance based on the start-up costs associated with new plants and Britannia Industries Ltd.'s consolidated net profit for the second quarter of the current financial year?",
+        "answer": "Financial Performance",
+        "question_type": "comparison_query",
+        "evidence_list": [
+            {
+                "url": "https://www.ndtvprofit.com/quarterly-earnings/britannia-industries-q2-results-profit-down-9-misses-estimates",
+                "published_at": "2024-11-11T12:49:25+00:00",
+                "claim": "Britannia Industries Ltd.'s consolidated net profit fell 9% in the second quarter of the current financial year."
+            },
+            {
+                "url": "https://www.ndtvprofit.com/research-reports/motherson-wiring-q2-results-review-start-up-costs-of-new-plants-hurt-performance-motilal-oswal",
+                "published_at": "2024-11-11T12:48:08+00:00",
+                "claim": "Motherson Wiring's Q2 performance was negatively impacted due to the start-up costs associated with new plants."
+            }
+        ]
+    }
+]
