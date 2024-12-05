@@ -6,12 +6,12 @@ import base64
 import os
 from online_data_process import create_retriever_from_pdf
 import re
-
 from dotenv import load_dotenv
 load_dotenv(".env")
+from socketio_instance import app, socketio  # Import the socketio instance
 
-app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+# app = Flask(__name__)
+# socketio = SocketIO(app, cors_allowed_origins="*")
 
 retriever = None
 
