@@ -55,7 +55,7 @@ def create_vector_db(embeddings=OpenAIEmbeddings()):
         print(f"Error loading PDF file: {e}")
         return None
 
-create_vector_db()
+# create_vector_db()
 
 
 @tool
